@@ -8,6 +8,8 @@ import numpy as np
 import random
 import tensorflow as tf
 import math
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 cmdLineArgs = sys.argv[1:]
 dataFile = cmdLineArgs[0]
@@ -34,6 +36,10 @@ freqDikt.extend(collections.Counter(allWords).most_common(maxVocab -1))
 dikt = {}
 for word, _ in freqDikt:
     dikt[word] = len(dikt)
+
+rev_dikt = {}
+for k,v in zip(dikt.values(),dikt.keys()):
+    rev_dikt[k] = v
 
 transformedData = list()
 for word in allWords:
@@ -143,6 +149,8 @@ with graph.as_default():
 
 num_steps = 100000
 
+training_history=[]
+
 print("Start Training")
 
 with tf.Session(graph=graph) as session:
@@ -161,10 +169,40 @@ with tf.Session(graph=graph) as session:
 
         if step % 1000 == 0:
             print("Average Loss after {} iteration: {}".format(step,average_loss/1000))
+            training_history.append(average_loss/1000)
             average_loss = 0
 
     final_embeddings = embedding_norm.eval()
 
+""" 
+Plot training history.
+"""
+print("Plotting Training History")
+plt.figure(1)
+plt.plot(training_history)
+plt.title("Training Loss")
+plt.xlabel("Iteration")
+plt.ylabel("Loss")
+
+
+"""
+Plot Embeddings in 2D space
+"""
+print("Plotting Learned Embeddings")
+tsne = TSNE(init='pca',n_iter=5000,method='exact')
+"""
+Plotting first 500 words in 2-d
+"""
+embed_2d = tsne.fit_transform(final_embeddings[:500,:])
+words_to_plot = [ rev_dikt[idx] for idx in xrange(500)]
+
+plt.figure(2)
+for i,label in enumerate(words_to_plot):
+    x,y = embed_2d[i,:]
+    plt.scatter(x,y)
+    plt.annotate(label,xy=(x,y),xytext=(5, 2),textcoords='offset points',ha='right',va='bottom')
+
+plt.show()
 
 
 
